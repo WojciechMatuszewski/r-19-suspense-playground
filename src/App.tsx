@@ -2,11 +2,12 @@ import clsx from "clsx";
 import {
   ComponentProps,
   Suspense,
-  startTransition,
   use,
+  useActionState,
   useDeferredValue,
+  useEffect,
   useId,
-  useOptimistic
+  useRef
 } from "react";
 
 import {
@@ -41,11 +42,27 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function Home() {
+  const [query, setQuery] = useSearchParamsQuery();
+
+  const [, submitFormAction, isActionPending] = useActionState<
+    string,
+    FormData
+  >((_, formData) => {
+    const searchQuery = formData.get("search") as string;
+    setQuery(searchQuery);
+
+    return searchQuery;
+  }, query);
+
   return (
     <>
-      <SearchForm />
+      <SearchForm onSubmit={submitFormAction} />
       <PopularSearches />
-      <div className={"flex justify-center py-5"}>
+      <div
+        className={clsx("flex justify-center mt-12 transition-opacity", {
+          "opacity-60": isActionPending
+        })}
+      >
         <Suspense
           fallback={
             <div className={"flex gap-2 flex-col"}>
@@ -55,7 +72,7 @@ function Home() {
           }
         >
           <ErrorBoundary FallbackComponent={PokemonDetailError}>
-            <PokemonDetail />
+            <PokemonDetail isSearchLoading={isActionPending} query={query} />
           </ErrorBoundary>
         </Suspense>
       </div>
@@ -63,23 +80,13 @@ function Home() {
   );
 }
 
-function SearchForm() {
+function SearchForm({ onSubmit }: { onSubmit: (formData: FormData) => void }) {
   const searchInputId = useId();
-
-  const [query, setQuery] = useSearchParamsQuery();
-  const [optimisticQuery, setOptimisticQuery] = useOptimistic(query);
+  const [query] = useSearchParamsQuery();
 
   return (
     <search>
-      <span>{optimisticQuery}</span>
-      <form
-        action={(formData) => {
-          const searchQuery = formData.get("search") as string;
-          setOptimisticQuery(searchQuery);
-
-          setQuery(searchQuery);
-        }}
-      >
+      <form action={onSubmit}>
         <div className={"sr-only"}>
           <label htmlFor={searchInputId}>Search for pokemon</label>
         </div>
@@ -138,15 +145,23 @@ function PopularSearch({ pokemonName }: { pokemonName: string }) {
   );
 }
 
-function PokemonDetail() {
-  const [query] = useSearchParamsQuery();
+function PokemonDetail({
+  query,
+  isSearchLoading
+}: {
+  query: string;
+  isSearchLoading: boolean;
+}) {
   const deferredQuery = useDeferredValue(query);
-
   const isPending = deferredQuery !== query;
 
-  const isEmpty = deferredQuery === "";
-  if (isEmpty) {
-    return <div>Search...</div>;
+  const isLoading = isPending || isSearchLoading;
+
+  const isQueryEmpty = deferredQuery === "";
+  if (isQueryEmpty) {
+    return (
+      <div>{isSearchLoading ? "Searching..." : "Search for a Pokemon!"}</div>
+    );
   }
 
   const pokemon = use(fetchPokemon(deferredQuery));
@@ -155,7 +170,7 @@ function PokemonDetail() {
   return (
     <section
       className={clsx("transition-opacity opacity-100", {
-        "opacity-50": isPending
+        "opacity-50": isLoading
       })}
     >
       <h2 className={"text-center m-0"}>{pokemon.name}</h2>
@@ -188,8 +203,15 @@ function PokemonDetailImage({
   );
 }
 
-function PokemonDetailError({ error }: FallbackProps) {
+function PokemonDetailError({ error, resetErrorBoundary }: FallbackProps) {
   const [query] = useSearchParamsQuery();
+  const { current: capturedQuery } = useRef(query);
+
+  useEffect(() => {
+    if (query !== capturedQuery) {
+      resetErrorBoundary();
+    }
+  }, [capturedQuery, query, resetErrorBoundary]);
 
   const isNotFound = error.response.status === 404;
   if (isNotFound) {

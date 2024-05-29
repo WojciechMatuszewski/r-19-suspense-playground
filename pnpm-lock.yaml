@@ -26,6 +26,9 @@ dependencies:
   react-router-dom:
     specifier: 6.23.1
     version: 6.23.1(react-dom@19.0.0-rc-935180c7e0-20240524)(react@19.0.0-rc-935180c7e0-20240524)
+  spin-delay:
+    specifier: 2.0.0
+    version: 2.0.0(react@19.0.0-rc-935180c7e0-20240524)
   tailwind-merge:
     specifier: 2.3.0
     version: 2.3.0
@@ -1987,6 +1990,14 @@ packages:
   /source-map-js@1.2.0:
     resolution: {integrity: sha512-itJW8lvSA0TXEphiRoawsCksnlf8SyvmFzIhltqAHluXd88pkCd+cXJVHTDwdCr0IzwptSm035IHQktUu1QUMg==}
     engines: {node: '>=0.10.0'}
+
+  /spin-delay@2.0.0(react@19.0.0-rc-935180c7e0-20240524):
+    resolution: {integrity: sha512-uNQnIjJ3Ms5ojVUMJaUZrF2Gs2gsSrVExueYrh8/yGg+ecPj65aZ0QI6ln7dguw9Wpp+bVCqGeY2Q9bT4MCL/A==}
+    peerDependencies:
+      react: '>=17.0.1'
+    dependencies:
+      react: 19.0.0-rc-935180c7e0-20240524
+    dev: false
 
   /string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
