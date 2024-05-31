@@ -10,6 +10,8 @@ The goal was to learn a bit more about some of the APIs coming to React 19.
 
 In addition, I wanted to dip my toes in the [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API).
 
+https://github.com/WojciechMatuszewski/r-19-suspense-playground/assets/26322927/445eb3a9-9ce2-492f-870a-780b7b260350
+
 ## Learnings
 
 - It seems like the `v7_startTransition: true` on the router does not do what I want.
@@ -32,7 +34,7 @@ In addition, I wanted to dip my toes in the [View Transitions API](https://devel
 
       > <form/> accepts an async action, when it is submitted, <form/> will have a new state hook internally, and a global transition is started for the async action until it is completed.
 
-    Since the _granularity_ of updates in React is _per-component_, React will hold onto the "old" JSX of the component that renders the `form` tag.
+    Since React's update granularity is per component, React will keep the component's "old" JSX that renders the `form` tag.
 
 - How do I show pending UI in completely unrelated part of the app when submitting a form via `action`?
 
