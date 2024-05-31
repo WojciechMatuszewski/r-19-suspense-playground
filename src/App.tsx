@@ -11,10 +11,11 @@ import {
 } from "react";
 
 import {
-  BrowserRouter,
   Link,
-  Route,
-  Routes,
+  NavLink,
+  RouterProvider,
+  createBrowserRouter,
+  useParams,
   useSearchParams
 } from "react-router-dom";
 
@@ -23,14 +24,21 @@ import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 
 const pokedex = new Pokedex();
 
+const router = createBrowserRouter([
+  {
+    path: "/",
+    Component: Home
+  },
+  {
+    path: "/pokemon/:name",
+    Component: PokemonDetail
+  }
+]);
+
 function App() {
   return (
     <Layout>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" Component={Home} />
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </Layout>
   );
 }
@@ -41,26 +49,47 @@ function Layout({ children }: { children: React.ReactNode }) {
   return <main className={"max-w-lg w-full m-auto p-6 prose"}>{children}</main>;
 }
 
+function PokemonDetail() {
+  const params = useParams();
+  const pokemonName = params["name"];
+
+  if (!pokemonName) {
+    return <div>No pokemon name</div>;
+  }
+
+  const pokemon = use(fetchPokemon(pokemonName));
+
+  return (
+    <section>
+      <Link
+        to={{
+          pathname: "/",
+          search: `?q=${pokemon.name}`
+        }}
+        unstable_viewTransition={true}
+      >
+        Go back
+      </Link>
+      <div className={"m-auto w-fit"}>
+        <PokemonCard
+          name={pokemon.name}
+          src={pokemon.sprites.front_default ?? "/placeholder.png"}
+        />
+      </div>
+    </section>
+  );
+}
+
 function Home() {
-  const [query, setQuery] = useSearchParamsQuery();
-
-  const [, submitFormAction, isActionPending] = useActionState<
-    string,
-    FormData
-  >((_, formData) => {
-    const searchQuery = formData.get("search") as string;
-    setQuery(searchQuery);
-
-    return searchQuery;
-  }, query);
+  const { query, isPending, action } = usePokemonQueryAction();
 
   return (
     <>
-      <SearchForm onSubmit={submitFormAction} />
+      <SearchForm query={query} action={action} />
       <PopularSearches />
       <div
         className={clsx("flex justify-center mt-12 transition-opacity", {
-          "opacity-60": isActionPending
+          "opacity-60": isPending
         })}
       >
         <Suspense
@@ -71,8 +100,8 @@ function Home() {
             </div>
           }
         >
-          <ErrorBoundary FallbackComponent={PokemonDetailError}>
-            <PokemonDetail isSearchLoading={isActionPending} query={query} />
+          <ErrorBoundary FallbackComponent={FoundPokemonError}>
+            <FoundPokemon isSearchLoading={isPending} query={query} />
           </ErrorBoundary>
         </Suspense>
       </div>
@@ -80,13 +109,18 @@ function Home() {
   );
 }
 
-function SearchForm({ onSubmit }: { onSubmit: (formData: FormData) => void }) {
+function SearchForm({
+  action,
+  query
+}: {
+  action: (formData: FormData) => void;
+  query: string;
+}) {
   const searchInputId = useId();
-  const [query] = useSearchParamsQuery();
 
   return (
     <search>
-      <form action={onSubmit}>
+      <form action={action}>
         <div className={"sr-only"}>
           <label htmlFor={searchInputId}>Search for pokemon</label>
         </div>
@@ -96,7 +130,7 @@ function SearchForm({ onSubmit }: { onSubmit: (formData: FormData) => void }) {
             defaultValue={query}
             key={query}
             type="search"
-            name="search"
+            name="q"
             placeholder={"Search for pokemon"}
             className={"input input-bordered flex-1"}
           />
@@ -127,7 +161,7 @@ function PopularSearches() {
 }
 
 function PopularSearch({ pokemonName }: { pokemonName: string }) {
-  const [query] = useSearchParamsQuery();
+  const [query] = usePokemonSearchParamsQuery();
 
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const normalizedPokemonName = pokemonName.toLocaleLowerCase();
@@ -145,7 +179,7 @@ function PopularSearch({ pokemonName }: { pokemonName: string }) {
   );
 }
 
-function PokemonDetail({
+function FoundPokemon({
   query,
   isSearchLoading
 }: {
@@ -165,7 +199,7 @@ function PokemonDetail({
   }
 
   const pokemon = use(fetchPokemon(deferredQuery));
-  const imgSrc = pokemon.sprites.front_default ?? "/placeholder.png";
+  const imageSrc = pokemon.sprites.front_default ?? "/placeholder.png";
 
   return (
     <section
@@ -173,23 +207,51 @@ function PokemonDetail({
         "opacity-50": isLoading
       })}
     >
-      <h2 className={"text-center m-0"}>{pokemon.name}</h2>
-      <ErrorBoundary
-        key={deferredQuery}
-        fallback={<img src={imgSrc} className={"w-[128px] h-[128px]"} />}
+      <h2 className={"text-center m-0 p-0 mb-2"}>Found pokemon</h2>
+
+      <NavLink
+        to={`/pokemon/${pokemon.name}`}
+        className={"no-underline hover:shadow-md block"}
+        unstable_viewTransition={true}
       >
-        <Suspense
-          fallback={<div className={"skeleton w-[128px] h-[128px] mt-2"}></div>}
-        >
-          <PokemonDetailImage src={imgSrc} />
-        </Suspense>
-      </ErrorBoundary>
+        <PokemonCard name={pokemon.name} src={imageSrc} />
+      </NavLink>
     </section>
   );
 }
 
-function PokemonDetailImage({
-  src = "",
+function PokemonCard({ name, src }: { name: string; src: string }) {
+  return (
+    <div
+      className={
+        "card card-compact bg-base-300 [view-transition-name:pokemon-card]"
+      }
+    >
+      <h2
+        className={
+          "card-title self-center mt-5 [view-transition-name:pokemon-card-heading]"
+        }
+      >
+        {name}
+      </h2>
+      <ErrorBoundary
+        key={name}
+        // key={deferredQuery}
+        fallback={<img src={src} className={"w-[128px] h-[128px]"} />}
+      >
+        <Suspense
+          fallback={<div className={"skeleton w-[128px] h-[128px]"}></div>}
+        >
+          <PokemonCardImage src={src} />
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  );
+}
+
+function PokemonCardImage({
+  src = "/placeholder.jpg",
+  className,
   ...restOfProps
 }: ComponentProps<"img">) {
   const fetchedSrc = use(fetchPokemonImageSrc(src));
@@ -197,14 +259,17 @@ function PokemonDetailImage({
   return (
     <img
       {...restOfProps}
-      className={"m-0 p-0 w-[128px] h-[128px]"}
+      className={clsx(
+        className,
+        "p-0 m-auto block w-[128px] h-[128px] [view-transition-name:pokemon-image]"
+      )}
       src={fetchedSrc}
-    ></img>
+    />
   );
 }
 
-function PokemonDetailError({ error, resetErrorBoundary }: FallbackProps) {
-  const [query] = useSearchParamsQuery();
+function FoundPokemonError({ error, resetErrorBoundary }: FallbackProps) {
+  const [query] = usePokemonSearchParamsQuery();
   const { current: capturedQuery } = useRef(query);
 
   useEffect(() => {
@@ -257,7 +322,7 @@ function PokemonDetailError({ error, resetErrorBoundary }: FallbackProps) {
   );
 }
 
-function useSearchParamsQuery() {
+function usePokemonSearchParamsQuery() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = (searchParams.get("q") ?? "").trim();
 
@@ -269,6 +334,22 @@ function useSearchParamsQuery() {
   };
 
   return [query, setQuery] as const;
+}
+
+function usePokemonQueryAction() {
+  const [query, setQuery] = usePokemonSearchParamsQuery();
+
+  const [, action, isPending] = useActionState<string, FormData>(
+    (_previousState, formData) => {
+      const newQuery = formData.get("q") as string;
+      setQuery(newQuery);
+
+      return newQuery;
+    },
+    query
+  );
+
+  return { action, isPending, query };
 }
 
 const pokemonCache = new Map<string, Promise<Pokemon>>();

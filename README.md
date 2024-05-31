@@ -1,4 +1,16 @@
-# Learnings
+# Suspense enabled "Search pokemon" app
+
+The goal was to learn a bit more about some of the APIs coming to React 19.
+
+- The `use` hook.
+
+- The `useActionState` hook.
+
+- Loading images via `use` hook.
+
+In addition, I wanted to dip my toes in the [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API).
+
+## Learnings
 
 - It seems like the `v7_startTransition: true` on the router does not do what I want.
 
@@ -27,3 +39,17 @@
   - I **did not find any other way than moving the `useActionState` to the parent**.
 
   - I do not like this pattern. What if I had a ton of stuff in-between the form and the component displaying the data?
+
+    - On the other hand, the `form` acts as a `Context.Provider`. If I want the state from the `Context.Provider` in my component, the `Context.Provider` has to wrap that component.
+
+- To enable the [View Transitions API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API) I had to use the `createBrowserRouter` function.
+
+  - The `BrowserRouter` component does not support that API.
+
+  - The defaults of the _View Transitions API_ are very good. The cross-fade effect adds a lot of fluidity to the page.
+
+- Use the `view-transition-name` on an element to tell the browser it should "move" in-between screens.
+
+  - This is quite amazing. With a single line of CSS, I can create animations that previously required a lot of code.
+
+  - You have everything you need to craft really elaborate animations since you can directly configure the `animation` property used for the transition.
